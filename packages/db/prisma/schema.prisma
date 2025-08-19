@@ -18,9 +18,37 @@ enum Role {
   user
 }
 
+enum Side {
+  yes
+  no
+}
+
+model StockBalance {
+  id        String @id @default(uuid())
+  user      User   @relation(fields: [userId], references: [id])
+  userId    String
+  side      Side
+  locked    Int
+  available Int
+  marketId  String
+  market    Market @relation(fields: [marketId], references: [id])
+}
+
 model User {
-  id       String @id @default(uuid())
-  email    String @unique
-  password String
-  role     Role
+  id           String         @id @default(uuid())
+  email        String         @unique
+  password     String
+  role         Role
+  InrBalance   Int            @default(0)
+  stockBalance StockBalance[]
+}
+
+model Market {
+  id            String         @id @default(uuid())
+  title         String
+  description   String
+  sourceOfTruth String
+  endDate       DateTime
+  imageUrl      String
+  StockBalance  StockBalance[]
 }

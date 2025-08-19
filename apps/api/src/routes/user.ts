@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { signup_schema, login_schema } from "@repo/utils/schema"
+import { signup_schema, login_schema, onramp_schema } from "@repo/utils/schema"
 import { prisma } from "@repo/db/client"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import dotenv from "dotenv"
+import { authenticatedRequest, authMiddleware } from "../middleware/auth";
 
 dotenv.config()
 
@@ -122,6 +123,54 @@ user_router.post("/signin", async (req, res) => {
             message: "Logged in successfully",
             existing_user
         })
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error instanceof Error ? error.message : "An unknown error occurred"
+        })
+    }
+})
+
+//usually we will hit the bank api or any third party api(razorpay) that will in turn call our webhook that will make changes in our db
+
+user_router.post("/onramp/inr", authMiddleware, async (req: authenticatedRequest, res) => {
+    try {
+        // Validate the request body
+        let parsed_data = onramp_schema.safeParse(req.body)
+        if (!parsed_data.success) {
+            res.status(400).json({
+                success: false,
+                message: "Invalid inputs",
+                error: parsed_data?.error
+            })
+            return;
+        }
+
+        let { amount } = parsed_data.data;
+
+        const amount_in_cents = Math.round(amount * 100);
+
+        // Get user from auth middleware
+        const user = req.user;
+
+        // Update user's INR balance
+        const updated_user = await prisma.user.update({
+            where: { id: user?.id },
+            data: {
+                InrBalance: {
+                    increment: amount_in_cents
+                }
+            }
+        });
+
+        res.json({
+            success: true,
+            message: `Successfully added ₹${amount} to your balance`,
+            amount: amount,
+            amount_in_cents: amount_in_cents,
+            new_balance: updated_user.InrBalance / 100 // Convert back to decimal for display
+        });
 
     } catch (error) {
         res.status(500).json({
