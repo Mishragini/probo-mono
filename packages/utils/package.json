@@ -2,19 +2,12 @@
     "name": "@repo/utils",
     "version": "1.0.0",
     "exports": {
-        "./schema": "./src/schema.ts"
-    },
-    "main": "index.js",
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "./schema": "./src/validationSchema.ts",
+        "./types": "./src/requestTypes.ts"
     },
     "devDependencies": {
         "@repo/typescript-config": "workspace:*"
     },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
-    "description": "",
     "dependencies": {
         "zod": "^4.0.17"
     }

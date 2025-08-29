@@ -23,6 +23,18 @@ enum Side {
   no
 }
 
+enum OrderType {
+  buy
+  sell
+}
+
+enum OrderStatus {
+  filled
+  pending
+  cancelled
+  partial
+}
+
 model StockBalance {
   id        String @id @default(uuid())
   user      User   @relation(fields: [userId], references: [id])
@@ -34,13 +46,22 @@ model StockBalance {
   market    Market @relation(fields: [marketId], references: [id])
 }
 
+model InrBalance {
+  id        String @id @default(uuid())
+  locked    Int    @default(0)
+  available Int    @default(0)
+  userId    String @unique
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 model User {
   id           String         @id @default(uuid())
   email        String         @unique
   password     String
   role         Role
-  InrBalance   Int            @default(0)
   stockBalance StockBalance[]
+  orders       Order[]
+  inrBalance   InrBalance?
 }
 
 model Market {
@@ -51,4 +72,19 @@ model Market {
   endDate       DateTime
   imageUrl      String
   StockBalance  StockBalance[]
+  orders        Order[]
+}
+
+model Order {
+  id           String      @id @default(uuid())
+  side         Side
+  type         OrderType
+  status       OrderStatus
+  price        Int
+  quantity     Int
+  remainingQty Int
+  userId       String
+  user         User        @relation(fields: [userId], references: [id])
+  marketId     String
+  market       Market      @relation(fields: [marketId], references: [id])
 }

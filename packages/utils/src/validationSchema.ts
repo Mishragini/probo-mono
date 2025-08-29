@@ -51,6 +51,7 @@ export const market_schema = z.object({
         .trim(),
 })
 
+
 export type signup_schema = z.infer<typeof signup_schema>;
 export type login_schema = z.infer<typeof login_schema>;
 export type onramp_schema = z.infer<typeof onramp_schema>;

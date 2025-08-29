@@ -5,6 +5,7 @@ import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 import dotenv from "dotenv"
 import { authenticatedRequest, authMiddleware } from "../middleware/auth";
+import { RedisManager } from "../utils/redisManager";
 
 dotenv.config()
 
@@ -38,10 +39,43 @@ user_router.post("/signup", async (req, res) => {
             return
         }
 
+        let random_uuid = crypto.randomUUID()
+
+        let redis_instance = RedisManager.getInstance()
+        let reply_to = redis_instance.stream_name
+        let stream_response = await redis_instance.sendAndAwait({
+            type: "signup",
+            data: {
+                user_id: random_uuid,
+                reply_to
+            }
+        })
+
+        let engine_response = stream_response?.[0]?.message?.response
+
+        if (!engine_response) {
+            res.status(500).json({
+                success: false,
+                message: "No message from the engine."
+            })
+            return
+        }
+
+        let parsed_response = JSON.parse(engine_response)
+
+        if (!parsed_response?.success) {
+            res.status(500).json({
+                success: false,
+                message: parsed_response?.message || "Failed to add the user in the engine."
+            })
+            return
+        }
+
         const hashed_password = await bcrypt.hash(password, 10)
 
         let new_user = await prisma.user.create({
             data: {
+                id: random_uuid,
                 email,
                 password: hashed_password,
                 role
@@ -83,7 +117,6 @@ user_router.post("/signin", async (req, res) => {
         }
 
         let { email, password } = parsed_data?.data
-
 
         let existing_user = await prisma.user.findFirst({
             where: {
@@ -155,21 +188,31 @@ user_router.post("/onramp/inr", authMiddleware, async (req: authenticatedRequest
         const user = req.user;
 
         // Update user's INR balance
-        const updated_user = await prisma.user.update({
-            where: { id: user?.id },
-            data: {
-                InrBalance: {
+        const updated_balance = await prisma.inrBalance.upsert({
+            where: {
+                userId: user?.id
+            },
+            update: {
+                available: {
                     increment: amount_in_cents
                 }
+            },
+            create: {
+                available: amount_in_cents,
+                user: {
+                    connect: {
+                        id: user?.id
+                    }
+                }
             }
-        });
+        })
 
         res.json({
             success: true,
             message: `Successfully added ₹${amount} to your balance`,
             amount: amount,
             amount_in_cents: amount_in_cents,
-            new_balance: updated_user.InrBalance / 100 // Convert back to decimal for display
+            new_available_balance: updated_balance.available / 100 // Convert back to decimal for display
         });
 
     } catch (error) {

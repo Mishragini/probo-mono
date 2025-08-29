@@ -1,0 +1,15 @@
+{
+    "name": "@repo/redis",
+    "version": "1.0.0",
+    "exports": {
+        "./index": "./src/index.ts"
+    },
+    "dependencies": {
+        "@repo/utils": "workspace:*",
+        "redis": "^5.8.2"
+    },
+    "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
+        "@types/node": "^22.15.3"
+    }
+}
